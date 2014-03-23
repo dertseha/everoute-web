@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"runtime/debug"
 
@@ -70,12 +71,17 @@ func main() {
 	universeBuilder := prepareUniverse()
 	universe := universeBuilder.Build()
 
-	log.Printf("Starting server...")
+	log.Printf("Initializing server...")
 	rpcServer := rpc.NewServer()
 	rpcServer.RegisterCodec(rpcJson.NewCodec(), "application/json")
 	service := NewRouteService(universe)
 	rpcServer.RegisterService(service, "Route")
 
 	http.Handle("/", rpcServer)
-	http.ListenAndServe(":3000", nil)
+	serverPort := os.Getenv("PORT")
+	if serverPort == "" {
+		serverPort = "3000"
+	}
+	log.Printf("Starting server on port <%s>...", serverPort)
+	http.ListenAndServe(":"+serverPort, nil)
 }
