@@ -1,12 +1,8 @@
 package main
 
 import (
-	encodingJson "encoding/json"
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
-	"reflect"
 	"runtime"
 	"runtime/debug"
 
@@ -18,72 +14,31 @@ import (
 	"github.com/dertseha/everoute/travel/rules/security"
 	"github.com/dertseha/everoute/travel/rules/transitcount"
 	"github.com/dertseha/everoute/universe"
+
+	"github.com/dertseha/everoute-web/data"
 )
 
-type Table struct {
-	Names []string        `json:"names"`
-	Data  [][]interface{} `json:"data"`
-}
-
-func readTableFile(fileName string) *Table {
-	var table Table
-	content, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to read file <%s>", err))
-	}
-
-	err = encodingJson.Unmarshal(content, &table)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to decode file <%s>", err))
-	}
-
-	return &table
-}
-
-func getTableColumnIndices(table *Table) map[string]int {
-	columns := make(map[string]int)
-
-	for index, name := range table.Names {
-		columns[name] = index
-	}
-
-	return columns
-}
-
 func buildSolarSystems(builder *universe.UniverseBuilder) {
-	table := readTableFile("solarSystems.json")
-	columns := getTableColumnIndices(table)
-
-	for _, system := range table.Data {
-		regionId := universe.Id(reflect.ValueOf(system[columns["regionId"]]).Float())
-		constellationId := universe.Id(reflect.ValueOf(system[columns["constellationId"]]).Float())
-		solarSystemId := universe.Id(reflect.ValueOf(system[columns["solarSystemId"]]).Float())
-		//solarSystemName := reflect.ValueOf(system[columns["solarSystemName"]]).String()
-		x := reflect.ValueOf(system[columns["x"]]).Float()
-		y := reflect.ValueOf(system[columns["y"]]).Float()
-		z := reflect.ValueOf(system[columns["z"]]).Float()
-		trueSec := universe.TrueSecurity(reflect.ValueOf(system[columns["security"]]).Float())
+	for _, system := range data.SolarSystems {
+		trueSec := universe.TrueSecurity(system.Security)
 		galaxyId := universe.NewEdenId
 
-		if regionId >= 11000000 {
+		if system.RegionId >= 11000000 {
 			galaxyId = universe.WSpaceId
 		}
 
-		builder.AddSolarSystem(solarSystemId, constellationId, regionId, galaxyId, universe.NewSpecificLocation(x, y, z), trueSec)
+		builder.AddSolarSystem(system.SolarSystemId, system.ConstellationId, system.RegionId, galaxyId,
+			universe.NewSpecificLocation(system.X, system.Y, system.Z), trueSec)
 	}
+	data.SolarSystems = nil
 }
 
 func buildJumpGates(builder *universe.UniverseBuilder) {
-	table := readTableFile("solarSystemJumps.json")
-	columns := getTableColumnIndices(table)
-
-	for _, jumpData := range table.Data {
-		var fromSolarSystemId = universe.Id(reflect.ValueOf(jumpData[columns["fromSolarSystemId"]]).Float())
-		var toSolarSystemId = universe.Id(reflect.ValueOf(jumpData[columns["toSolarSystemId"]]).Float())
-		var extension = builder.ExtendSolarSystem(fromSolarSystemId)
-
-		extension.AddJump(jumpgate.JumpType, toSolarSystemId)
+	for _, jumpData := range data.SolarSystemJumps {
+		extension := builder.ExtendSolarSystem(jumpData.FromSolarSystemId)
+		extension.AddJump(jumpgate.JumpType, jumpData.ToSolarSystemId)
 	}
+	data.SolarSystemJumps = nil
 }
 
 func prepareUniverse() *universe.UniverseBuilder {

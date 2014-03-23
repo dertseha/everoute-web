@@ -1,0 +1,20 @@
+{
+  "method": "Route.Find",
+  "params": [{
+    "route": {
+      "from": {
+        "solarSystems": [30002509]
+      },
+      "to": {
+        "solarSystem": 30002526
+      },
+      "avoid": {
+        "solarSystems": [30002510]
+      }
+    },
+    "capabilities": {
+      "jumpGate": {}
+    }
+  }],
+  "id": 1
+}

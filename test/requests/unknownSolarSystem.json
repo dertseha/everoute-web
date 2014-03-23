@@ -1,0 +1,14 @@
+{
+  "method": "Route.Find",
+  "params": [{
+    "route": {
+      "from": {
+        "solarSystems": [1]
+      }
+    },
+    "capabilities": {
+      "jumpGate": {}
+    }
+  }],
+  "id": 1
+}
