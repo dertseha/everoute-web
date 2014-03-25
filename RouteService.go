@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"time"
 
 	"github.com/dertseha/everoute/travel"
 	"github.com/dertseha/everoute/travel/capabilities"
@@ -22,11 +23,11 @@ import (
 )
 
 type routeSearchResultCollector struct {
-	route *search.Route
+	channel chan *search.Route
 }
 
 func (collector *routeSearchResultCollector) Collect(route *search.Route) {
-	collector.route = route
+	collector.channel <- route
 }
 
 type RouteService struct {
@@ -52,10 +53,14 @@ func (service *RouteService) Find(r *http.Request, request *api.RouteFindRequest
 	capability := getTravelCapability(service.universe, &request.Capabilities)
 	rule := getTravelRule(request.Rules)
 	starts := getStartSystems(service.universe, &request.Route.From)
-	var collector = &routeSearchResultCollector{}
-	var searchDone = make(chan int)
+	timeout := time.After(25 * time.Second)
+	searchDone := make(chan int)
+	routeChannel := make(chan *search.Route)
+	collector := &routeSearchResultCollector{channel: routeChannel}
+	done := false
+	var foundRoute *search.Route = nil
 
-	builder := search.NewRouteFinder(capability, rule, starts, collector, func() { searchDone <- 1 })
+	builder := search.NewRouteFinder(capability, rule, starts, collector, func() { searchDone <- 1; close(searchDone) })
 	for _, waypoint := range request.Route.Via {
 		builder.AddWaypoint(getOptimizedSystemSearchCriterion(service.universe, waypoint.SolarSystem, rule, request.Route.Avoid))
 	}
@@ -63,13 +68,37 @@ func (service *RouteService) Find(r *http.Request, request *api.RouteFindRequest
 		builder.ForDestination(getOptimizedSystemSearchCriterion(service.universe, request.Route.To.SolarSystem, rule, request.Route.Avoid))
 	}
 
-	builder.Build()
+	finder := builder.Build()
+	onTimeout := func() {
+		finder.Stop()
+		<-searchDone
+		done = true
+	}
 
-	<-searchDone
+	select {
+	case route := <-routeChannel:
+		foundRoute = route
+	case <-searchDone:
+		done = true
+	case <-timeout:
+		onTimeout()
+	}
+	for !done {
+		select {
+		case route := <-routeChannel:
+			foundRoute = route
+		case <-searchDone:
+			done = true
+		case <-timeout:
+			onTimeout()
+		case <-time.After(2 * time.Second):
+			onTimeout()
+		}
+	}
 
 	response.Path = make([]api.PathEntry, 0)
-	if collector.route != nil {
-		steps := collector.route.Steps()
+	if foundRoute != nil {
+		steps := foundRoute.Steps()
 		for _, step := range steps {
 			pathEntry := api.PathEntry{SolarSystem: step.SolarSystemId()}
 			response.Path = append(response.Path, pathEntry)
