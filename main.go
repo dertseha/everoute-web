@@ -37,7 +37,7 @@ func buildSolarSystems(builder *universe.UniverseBuilder) {
 func buildJumpGates(builder *universe.UniverseBuilder) {
 	for _, jumpData := range data.SolarSystemJumps {
 		extension := builder.ExtendSolarSystem(jumpData.FromSolarSystemId)
-		extension.AddJump(jumpgate.JumpType, jumpData.ToSolarSystemId)
+		extension.BuildJump(jumpgate.JumpType, jumpData.ToSolarSystemId)
 	}
 	data.SolarSystemJumps = nil
 }
