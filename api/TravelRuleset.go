@@ -22,9 +22,14 @@ type JumpDistanceTravelRuleParameter struct {
 	TravelRuleParameter
 }
 
+type WarpDistanceTravelRuleParameter struct {
+	TravelRuleParameter
+}
+
 type TravelRuleset struct {
 	TransitCount *TransitCountTravelRuleParameter `json:"transitCount,omitempty"`
 	MinSecurity  *MinSecurityTravelRuleParameter  `json:"minSecurity,omitempty"`
 	MaxSecurity  *MaxSecurityTravelRuleParameter  `json:"maxSecurity,omitempty"`
 	JumpDistance *JumpDistanceTravelRuleParameter `json:"jumpDistance,omitempty"`
+	WarpDistance *WarpDistanceTravelRuleParameter `json:"warpDistance,omitempty"`
 }

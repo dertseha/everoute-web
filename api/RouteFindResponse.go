@@ -5,7 +5,9 @@ import (
 )
 
 type PathEntry struct {
-	SolarSystem universe.Id `json:"solarSystem"`
+	SolarSystem  universe.Id `json:"solarSystem"`
+	JumpDistance interface{} `json:"jumpDistance,omitempty"`
+	WarpDistance interface{} `json:"warpDistance,omitempty"`
 }
 
 type RouteFindResponse struct {

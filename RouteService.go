@@ -16,8 +16,10 @@ import (
 	"github.com/dertseha/everoute/travel/rules/jumpdistance"
 	"github.com/dertseha/everoute/travel/rules/security"
 	"github.com/dertseha/everoute/travel/rules/transitcount"
+	"github.com/dertseha/everoute/travel/rules/warpdistance"
 	"github.com/dertseha/everoute/travel/search"
 	"github.com/dertseha/everoute/universe"
+	"github.com/dertseha/everoute/util"
 
 	"github.com/dertseha/everoute-web/api"
 )
@@ -100,7 +102,16 @@ func (service *RouteService) Find(r *http.Request, request *api.RouteFindRequest
 	if foundRoute != nil {
 		steps := foundRoute.Steps()
 		for _, step := range steps {
+			jumpDistance := step.EnterCosts().Cost(jumpdistance.NullCost()).Value()
+			warpDistance := step.EnterCosts().Cost(warpdistance.NullCost()).Join(step.ContinueCosts().Cost(warpdistance.NullCost())).Value()
 			pathEntry := api.PathEntry{SolarSystem: step.SolarSystemId()}
+
+			if jumpDistance > 0.0 {
+				pathEntry.JumpDistance = jumpDistance
+			}
+			if warpDistance > 0.0 {
+				pathEntry.WarpDistance = warpDistance / util.MetersPerAu
+			}
 			response.Path = append(response.Path, pathEntry)
 		}
 	}
@@ -150,6 +161,9 @@ func getTravelRule(ruleset *api.TravelRuleset) travel.TravelRule {
 		}
 		if ruleset.JumpDistance != nil {
 			addRule(ruleset.JumpDistance.Priority, jumpdistance.Rule())
+		}
+		if ruleset.WarpDistance != nil {
+			addRule(ruleset.WarpDistance.Priority, warpdistance.Rule())
 		}
 	}
 	sort.Sort(priorizedRules)
