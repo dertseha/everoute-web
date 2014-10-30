@@ -97,7 +97,7 @@ func prepareUniverse() *universe.UniverseBuilder {
 	transitcount.ExtendUniverse(builder)
 	security.ExtendUniverse(builder)
 
-	jumpdrive.ExtendUniverse(builder, 5.0)
+	jumpdrive.ExtendUniverse(builder, 10.0)
 
 	dropUnusedData()
 
