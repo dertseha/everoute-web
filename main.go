@@ -21,7 +21,25 @@ import (
 	"github.com/dertseha/everoute-web/data"
 )
 
+func reachableSystemPredicate() func(data.SolarSystemData) bool {
+	joveRegion := universe.Id(10000017)
+	specialSystems := make(map[universe.Id]interface{})
+
+	specialSystems[30000377] = nil
+	specialSystems[30000380] = nil
+	specialSystems[30000381] = nil
+
+	return func(system data.SolarSystemData) bool {
+		isJoveRegion := system.RegionId == joveRegion
+		_, isSpecialSystem := specialSystems[system.SolarSystemId]
+
+		return !isJoveRegion && !isSpecialSystem
+	}
+}
+
 func buildSolarSystems(builder *universe.UniverseBuilder) {
+	isSystemReachable := reachableSystemPredicate()
+
 	for _, system := range data.SolarSystems {
 		trueSec := universe.TrueSecurity(system.Security)
 		galaxyId := universe.NewEdenId
@@ -30,8 +48,10 @@ func buildSolarSystems(builder *universe.UniverseBuilder) {
 			galaxyId = universe.WSpaceId
 		}
 
-		builder.AddSolarSystem(system.SolarSystemId, system.ConstellationId, system.RegionId, galaxyId,
-			universe.NewSpecificLocation(system.X, system.Y, system.Z), trueSec)
+		if isSystemReachable(system) {
+			builder.AddSolarSystem(system.SolarSystemId, system.ConstellationId, system.RegionId, galaxyId,
+				universe.NewSpecificLocation(system.X, system.Y, system.Z), trueSec)
+		}
 	}
 }
 
@@ -73,13 +93,28 @@ func getJumpGateLocations() map[string]universe.Location {
 
 func buildJumpGates(builder *universe.UniverseBuilder) {
 	jumpGateLocations := getJumpGateLocations()
+	ids := builder.SolarSystemIds()
+	isSystemReachable := func(id universe.Id) bool {
+		found := false
+
+		for _, temp := range ids {
+			if temp == id {
+				found = true
+			}
+		}
+
+		return found
+	}
 
 	for _, jumpData := range data.SolarSystemJumps {
-		extension := builder.ExtendSolarSystem(jumpData.FromSolarSystemId)
-		jumpBuilder := extension.BuildJump(jumpgate.JumpType, jumpData.ToSolarSystemId)
 
-		jumpBuilder.From(jumpGateLocations[getJumpGateKey(jumpData.FromSolarSystemId, jumpData.ToSolarSystemId)])
-		jumpBuilder.To(jumpGateLocations[getJumpGateKey(jumpData.ToSolarSystemId, jumpData.FromSolarSystemId)])
+		if isSystemReachable(jumpData.FromSolarSystemId) && isSystemReachable(jumpData.ToSolarSystemId) {
+			extension := builder.ExtendSolarSystem(jumpData.FromSolarSystemId)
+			jumpBuilder := extension.BuildJump(jumpgate.JumpType, jumpData.ToSolarSystemId)
+
+			jumpBuilder.From(jumpGateLocations[getJumpGateKey(jumpData.FromSolarSystemId, jumpData.ToSolarSystemId)])
+			jumpBuilder.To(jumpGateLocations[getJumpGateKey(jumpData.ToSolarSystemId, jumpData.FromSolarSystemId)])
+		}
 	}
 }
 
@@ -104,6 +139,22 @@ func prepareUniverse() *universe.UniverseBuilder {
 	return builder
 }
 
+func checkBaseUniverse(verse universe.Universe) {
+	ids := verse.SolarSystemIds()
+
+	for _, id := range ids {
+		solarSystem := verse.SolarSystem(id)
+
+		if solarSystem.GalaxyId() == universe.NewEdenId {
+			gateJumps := solarSystem.Jumps(jumpgate.JumpType)
+
+			if len(gateJumps) == 0 {
+				log.Printf("Solar System %v has no jump gates!", id)
+			}
+		}
+	}
+}
+
 func initRuntime() {
 	numCpu := runtime.NumCPU()
 	maxThreads := 250 // Heroku limit: 256
@@ -119,6 +170,7 @@ func main() {
 	log.Printf("Building universe...")
 	universeBuilder := prepareUniverse()
 	universe := universeBuilder.Build()
+	checkBaseUniverse(universe)
 
 	log.Printf("Initializing server...")
 	rpcServer := rpc.NewServer()
