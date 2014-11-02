@@ -181,7 +181,7 @@ func getTravelCapability(universe universe.Universe, requestedCapabilities *api.
 	list := make([]travel.TravelCapability, 0)
 
 	if requestedCapabilities.JumpGate != nil {
-		list = append(list, jumpgate.JumpGateTravelCapability(universe))
+		list = append(list, jumpgate.JumpGateTravelCapability(universe, requestedCapabilities.JumpGate.AvoidHighSec))
 	}
 	if requestedCapabilities.JumpDrive != nil {
 		list = append(list, jumpdrive.JumpDriveTravelCapability(universe, requestedCapabilities.JumpDrive.DistanceLimit))

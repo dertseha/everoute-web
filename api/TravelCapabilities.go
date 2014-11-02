@@ -1,6 +1,7 @@
 package api
 
 type JumpGateTravelCapability struct {
+	AvoidHighSec bool `json:"avoidHighSec"`
 }
 
 type JumpDriveTravelCapability struct {
