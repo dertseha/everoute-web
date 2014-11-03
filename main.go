@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/rpc"
 	rpcJson "github.com/gorilla/rpc/json"
 
+	"github.com/dertseha/everoute"
 	"github.com/dertseha/everoute/travel/capabilities/jumpdrive"
 	"github.com/dertseha/everoute/travel/capabilities/jumpgate"
 	"github.com/dertseha/everoute/travel/rules/security"
@@ -165,8 +166,9 @@ func initRuntime() {
 }
 
 func main() {
-	initRuntime()
+	log.Printf("everoute-web v%v using everoute v%v", Version, everoute.Version)
 
+	initRuntime()
 	log.Printf("Building universe...")
 	universeBuilder := prepareUniverse()
 	universe := universeBuilder.Build()
